@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login System</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+  <div class="max-w-4xl mx-auto bg-white p-8 shadow-lg rounded-lg">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold">Welcome to the Blog</h1>
+      <div class="flex items-center gap-4">
+        {{if .User}}
+          <span class="text-xl">Hello, {{.User}}!</span>
+          <a href="/logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Logout</a>
+        {{else}}
+          <a href="/login" class="text-blue-500 hover:underline">Login</a>
+          <span class="text-gray-500">|</span>
+          <a href="/signup" class="text-blue-500 hover:underline">Sign Up</a>
+        {{end}}
+      </div>
+    </div>
+    <div class="mt-10 text-center text-gray-600">
+      <!-- You can add more content here later -->
+      <p class="text-2xl">This is your protected homepage.</p>
+    </div>
+  </div>
+</body>
+</html>

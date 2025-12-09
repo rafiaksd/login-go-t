@@ -6,9 +6,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/gofiber/template/html/v2"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var store = session.New()
@@ -28,11 +28,16 @@ func main() {
 	})
 
 	// Initialize SQLite database
-	db, err := gorm.Open("sqlite3", "./users.db")
+	db, err := gorm.Open(sqlite.Open("./users.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Error opening database: %v\n", err)
 	}
-	defer db.Close()
+	
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("Error getting DB from GORM: %v\n", err)
+	}
+	defer sqlDB.Close()
 
 	// Migrate User table
 	db.AutoMigrate(&User{})
@@ -69,19 +74,24 @@ func main() {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
-		// Hash password
+		if username == "" || email == "" || password == "" {
+			return c.Status(400).Render("signup", fiber.Map{"Error": "All fields are required"})
+		}
+
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
 			return c.Status(500).SendString("Error hashing password")
 		}
 
-		// Save new user in DB
 		user := User{
 			Username: username,
 			Email:    email,
 			Password: string(hashedPassword),
 		}
-		db.Create(&user)
+
+		if err := db.Create(&user).Error; err != nil {
+			return c.Status(400).Render("signup", fiber.Map{"Error": "Username or email already taken"})
+		}
 
 		return c.Redirect("/login")
 	})
@@ -96,28 +106,24 @@ func main() {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
-		// Find user by email
 		var user User
 		if err := db.Where("email = ?", email).First(&user).Error; err != nil {
-			return c.Status(401).SendString("Invalid credentials")
+			return c.Render("login", fiber.Map{"Error": "Invalid email or password"})
 		}
 
-		// Compare the password
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-			return c.Status(401).SendString("Invalid credentials")
+			return c.Render("login", fiber.Map{"Error": "Invalid email or password"})
 		}
 
 		sess, err := store.Get(c)
 		if err != nil {
 			return err
 		}
-
 		sess.Set("username", user.Username)
 		if err := sess.Save(); err != nil {
 			return err
 		}
 
-		// Redirect to homepage
 		return c.Redirect("/")
 	})
 
