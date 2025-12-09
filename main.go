@@ -51,5 +51,41 @@ func main() {
 		return c.Next()
 	})
 
+	// Show homepage
+	app.Get("/", func(c *fiber.Ctx) error {
+		username := c.Locals("user")
+		return c.Render("index", fiber.Map{
+			"User": username,
+		})
+	})
+
+	// Route to display sign-up page
+	app.Get("/signup", func(c *fiber.Ctx) error {
+		return c.Render("signup", nil)
+	})
+
+	// Handle sign-up
+	app.Post("/signup", func(c *fiber.Ctx) error {
+		username := c.FormValue("username")
+		email := c.FormValue("email")
+		password := c.FormValue("password")
+
+		// Hash password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return c.Status(500).SendString("Error hashing password")
+		}
+
+		// Save new user in DB
+		user := User{
+			Username: username,
+			Email:    email,
+			Password: string(hashedPassword),
+		}
+		db.Create(&user)
+
+		return c.Redirect("/login")
+	})
+
 	fmt.Println("Hi from login-go-t")
 }
