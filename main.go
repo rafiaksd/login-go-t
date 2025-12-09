@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"golang.org/x/crypto/bcrypt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	"github.com/gorilla/sessions"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var store = sessions.NewCookieStore([]byte("secret-key")) // Use a real secret key in production!
@@ -87,5 +87,44 @@ func main() {
 		return c.Redirect("/login")
 	})
 
-	fmt.Println("Hi from login-go-t")
+	// Route to display login page
+	app.Get("/login", func(c *fiber.Ctx) error {
+		return c.Render("login", nil)
+	})
+
+	// Handle login
+	app.Post("/login", func(c *fiber.Ctx) error {
+		email := c.FormValue("email")
+		password := c.FormValue("password")
+
+		// Find user by email
+		var user User
+		if err := db.Where("email = ?", email).First(&user).Error; err != nil {
+			return c.Status(401).SendString("Invalid credentials")
+		}
+
+		// Compare the password
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+			return c.Status(401).SendString("Invalid credentials")
+		}
+
+		// Store session data
+		session, _ := store.Get(c.Request(), "session")
+		session.Values["username"] = user.Username
+		session.Save(c)
+
+		// Redirect to homepage
+		return c.Redirect("/")
+	})
+
+	// Handle logout
+	app.Get("/logout", func(c *fiber.Ctx) error {
+		session, _ := store.Get(c.Request(), "session")
+		session.Values["username"] = nil
+		session.Save(c)
+		return c.Redirect("/login")
+	})
+
+	// Start the server
+	log.Fatal(app.Listen(":3000"))
 }
