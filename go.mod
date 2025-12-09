@@ -5,7 +5,6 @@ go 1.25.4
 require (
 	github.com/gofiber/fiber/v2 v2.52.10
 	github.com/gofiber/template/html/v2 v2.1.3
-	github.com/gorilla/sessions v1.4.0
 	github.com/jinzhu/gorm v1.9.16
 	golang.org/x/crypto v0.14.0
 )
@@ -15,7 +14,6 @@ require (
 	github.com/gofiber/template v1.8.3 // indirect
 	github.com/gofiber/utils v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

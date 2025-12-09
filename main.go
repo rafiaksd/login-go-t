@@ -4,14 +4,14 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/gofiber/template/html/v2"
-	"github.com/gorilla/sessions"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var store = sessions.NewCookieStore([]byte("secret-key")) // Use a real secret key in production!
+var store = session.New()
 
 // Define User model
 type User struct {
@@ -39,23 +39,22 @@ func main() {
 
 	// Middleware to check for logged-in users
 	app.Use(func(c *fiber.Ctx) error {
-		session, err := store.Get(c.Request(), "session")
+		session, err := store.Get(c)
 		if err != nil {
 			return err
 		}
 
-		// Attach user info to the context if logged in
-		if username, ok := session.Values["username"]; ok {
+		if username := session.Get("username"); username != nil {
 			c.Locals("user", username)
 		}
+
 		return c.Next()
 	})
 
 	// Show homepage
 	app.Get("/", func(c *fiber.Ctx) error {
-		username := c.Locals("user")
 		return c.Render("index", fiber.Map{
-			"User": username,
+			"User": c.Locals("user"),
 		})
 	})
 
@@ -108,10 +107,15 @@ func main() {
 			return c.Status(401).SendString("Invalid credentials")
 		}
 
-		// Store session data
-		session, _ := store.Get(c.Request(), "session")
-		session.Values["username"] = user.Username
-		session.Save(c)
+		sess, err := store.Get(c)
+		if err != nil {
+			return err
+		}
+
+		sess.Set("username", user.Username)
+		if err := sess.Save(); err != nil {
+			return err
+		}
 
 		// Redirect to homepage
 		return c.Redirect("/")
@@ -119,9 +123,16 @@ func main() {
 
 	// Handle logout
 	app.Get("/logout", func(c *fiber.Ctx) error {
-		session, _ := store.Get(c.Request(), "session")
-		session.Values["username"] = nil
-		session.Save(c)
+		sess, err := store.Get(c)
+		if err != nil {
+			return err
+		}
+
+		sess.Destroy()
+		if err := sess.Save(); err != nil {
+			return err
+		}
+
 		return c.Redirect("/login")
 	})
 
