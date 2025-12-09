@@ -36,6 +36,20 @@ func main() {
 
 	// Migrate User table
 	db.AutoMigrate(&User{})
-	
+
+	// Middleware to check for logged-in users
+	app.Use(func(c *fiber.Ctx) error {
+		session, err := store.Get(c.Request(), "session")
+		if err != nil {
+			return err
+		}
+
+		// Attach user info to the context if logged in
+		if username, ok := session.Values["username"]; ok {
+			c.Locals("user", username)
+		}
+		return c.Next()
+	})
+
 	fmt.Println("Hi from login-go-t")
 }
